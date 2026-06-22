@@ -39,7 +39,8 @@ router.post('/shorten', createLimiter, optionalAuth, async (req, res) => {
     shortCode: cleaned
   });
       await Url.create({ shortCode: cleaned, originalUrl: url, user: req.user ? req.user._id : null, primaryNode, replicaNode });
-      const shortUrl = `http://localhost:${process.env.PORT || 3000}/${cleaned}`;
+      // const shortUrl = `http://localhost:${process.env.PORT || 3000}/${cleaned}`;
+      const shortUrl = `${process.env.BASE_URL}/${cleaned}`;
       return res.status(201).json({ success: true, shortUrl, shortCode: cleaned, originalUrl: url, primaryNode, replicaNode, isOwned: !!req.user });
     }
 
@@ -57,7 +58,8 @@ router.post('/shorten', createLimiter, optionalAuth, async (req, res) => {
     shortCode
   });
         await Url.create({ shortCode, originalUrl: url, user: req.user ? req.user._id : null, primaryNode, replicaNode });
-        const shortUrl = `http://localhost:${process.env.PORT || 3000}/${shortCode}`;
+        // const shortUrl = `http://localhost:${process.env.PORT || 3000}/${shortCode}`;
+        const shortUrl = `${process.env.BASE_URL}/${shortCode}`;
         return res.status(201).json({ success: true, shortUrl, shortCode, originalUrl: url, primaryNode, replicaNode, isOwned: !!req.user });
       } catch (dupErr) {
         if (dupErr.code === 11000) { attempts++; continue; }
