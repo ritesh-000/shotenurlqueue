@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SnapLink — Distributed URL Shortener</title>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#0f1117;--bg2:#1a1d27;--bg3:#222536;--border:rgba(255,255,255,0.08);
+      --text:#e8eaf0;--muted:#8b8fa8;--accent:#6c63ff;--accent2:#a78bfa;
+      --green:#4ade80;--amber:#fbbf24;--red:#f87171;--blue:#60a5fa;
+    }
+    body{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,sans-serif;min-height:100vh;line-height:1.6}
+    nav{display:flex;align-items:center;justify-content:space-between;padding:1rem 2rem;border-bottom:1px solid var(--border)}
+    .logo{font-size:1.2rem;font-weight:700;color:var(--accent2);letter-spacing:-0.5px}
+    .logo span{color:var(--text)}
+    .nav-right{display:flex;align-items:center;gap:12px}
+    .nav-badge{font-size:11px;background:rgba(108,99,255,0.15);color:var(--accent2);border:1px solid rgba(108,99,255,0.3);padding:3px 10px;border-radius:20px}
+    .nav-user{font-size:13px;color:var(--muted)}
+    .btn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;transition:opacity .2s,transform .1s;white-space:nowrap}
+    .btn:hover{opacity:.9}.btn:active{transform:scale(.98)}
+    .btn-sm{background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;font-weight:500}
+    .btn-sm:hover{background:rgba(255,255,255,.07)}
+    .btn-outline{background:transparent;color:var(--accent2);border:1px solid rgba(108,99,255,.4);border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer}
+    .btn-outline:hover{background:rgba(108,99,255,.1)}
+    .btn-danger{background:rgba(248,113,113,.1);color:var(--red);border:1px solid rgba(248,113,113,.2);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer}
+    .container{max-width:1100px;margin:0 auto;padding:2rem}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+    @media(max-width:768px){.grid-2{grid-template-columns:1fr}}
+    .card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.5rem}
+    .card-title{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:1.25rem}
+    .hero{text-align:center;padding:3rem 1rem 2rem}
+    .hero h1{font-size:2.8rem;font-weight:800;letter-spacing:-1px;line-height:1.1}
+    .hero h1 span{color:var(--accent2)}
+    .hero p{color:var(--muted);margin-top:.75rem}
+    input[type=text],input[type=url],input[type=email],input[type=password]{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:10px 14px;outline:none;transition:border-color .2s;width:100%}
+    input:focus{border-color:var(--accent)}
+    input::placeholder{color:var(--muted)}
+    .input-row{display:flex;gap:10px}
+    .form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+    .form-label{font-size:12px;color:var(--muted);font-weight:500}
+    .result-box{background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.2);border-radius:8px;padding:14px;display:none}
+    .result-box.show{display:block}
+    .result-url{font-size:1.1rem;font-weight:700;color:var(--green);word-break:break-all}
+    .result-meta{font-size:12px;color:var(--muted);margin-top:6px}
+    .result-actions{display:flex;gap:8px;margin-top:10px}
+    .error-box{background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.2);border-radius:8px;padding:12px 14px;font-size:13px;color:var(--red);display:none}
+    .error-box.show{display:block}
+    .success-box{background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.2);border-radius:8px;padding:12px 14px;font-size:13px;color:var(--green);display:none}
+    .success-box.show{display:block}
+    .stat-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.25rem}
+    .stat-card{background:var(--bg3);border-radius:8px;padding:12px}
+    .stat-label{font-size:11px;color:var(--muted)}
+    .stat-val{font-size:1.4rem;font-weight:700;margin-top:2px}
+    .node-item{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px}
+    .node-item:last-child{border-bottom:none}
+    .node-dot{width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:10px;flex-shrink:0}
+    .node-name{display:flex;align-items:center}
+    .node-count{color:var(--muted)}
+    .cache-bar-wrap{margin-top:8px}
+    .cache-bar-label{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:5px}
+    .cache-bar-bg{background:var(--bg3);border-radius:4px;height:8px;overflow:hidden}
+    .cache-bar-fill{height:100%;background:var(--green);border-radius:4px;transition:width .4s}
+    .ring-container{display:flex;justify-content:center;padding:1rem 0}
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center}
+    .modal-overlay.show{display:flex}
+    .modal{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:2rem;width:100%;max-width:400px;margin:1rem}
+    .modal h2{font-size:1.4rem;font-weight:700;margin-bottom:.5rem}
+    .modal p{color:var(--muted);font-size:13px;margin-bottom:1.5rem}
+    .modal-tabs{display:flex;gap:4px;background:var(--bg3);border-radius:8px;padding:4px;margin-bottom:1.5rem}
+    .modal-tab{flex:1;padding:8px;text-align:center;font-size:13px;font-weight:500;border-radius:6px;cursor:pointer;color:var(--muted);border:none;background:none}
+    .modal-tab.active{background:var(--accent);color:#fff}
+    .my-urls-list{display:flex;flex-direction:column;gap:10px}
+    .url-item{background:var(--bg3);border-radius:8px;padding:12px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .url-item-left{flex:1;min-width:0}
+    .url-short{font-size:13px;font-weight:600;color:var(--accent2)}
+    .url-original{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+    .url-stats{font-size:11px;color:var(--muted);margin-top:4px}
+    .url-item-right{display:flex;gap:6px;flex-shrink:0}
+    .badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px}
+    .badge-purple{background:rgba(108,99,255,.15);color:var(--accent2)}
+    .tabs{display:flex;gap:4px;background:var(--bg3);border-radius:8px;padding:4px;margin-bottom:1.25rem}
+    .tab{flex:1;padding:7px;text-align:center;font-size:12px;font-weight:500;border-radius:6px;cursor:pointer;color:var(--muted);border:none;background:none}
+    .tab.active{background:var(--bg2);color:var(--text)}
+    .tab-content{display:none}.tab-content.active{display:block}
+    .divider{display:flex;align-items:center;gap:10px;margin:1rem 0;color:var(--muted);font-size:12px}
+    .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Snap<span>Link</span></div>
+  <div class="nav-right">
+    <div class="nav-badge">Distributed · 3 Nodes</div>
+    <div id="navUser" style="display:none">
+      <span class="nav-user" id="navUserName"></span>
+    </div>
+    <button class="btn-outline" id="authBtn" onclick="openAuth()">Sign in</button>
+    <button class="btn-sm" id="logoutBtn" style="display:none" onclick="logout()">Log out</button>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="hero">
+    <h1>Short links, <span>distributed</span><br>at scale</h1>
+    <p>Consistent hashing · LRU cache · Fault-tolerant replication · MongoDB persistence</p>
+  </div>
+
+  <!-- Shorten form -->
+  <div class="card" style="margin-bottom:1.5rem">
+    <div class="card-title">Shorten a URL</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="input-row">
+        <input type="url" id="urlInput" placeholder="https://example.com/some/long/url"/>
+        <input type="text" id="codeInput" placeholder="custom code (optional)" style="max-width:180px"/>
+        <button class="btn" onclick="shortenUrl()">Shorten →</button>
+      </div>
+      <div class="error-box" id="errorBox"></div>
+      <div class="result-box" id="resultBox">
+        <div class="result-url" id="resultUrl"></div>
+        <div class="result-meta" id="resultMeta"></div>
+        <div class="result-actions">
+          <button class="btn-sm" onclick="copyUrl()">Copy</button>
+          <button class="btn-sm" onclick="openUrl()">Open ↗</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- My URLs (shown when logged in) -->
+  <div class="card" id="myUrlsCard" style="margin-bottom:1.5rem;display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+      <div class="card-title" style="margin-bottom:0">My links</div>
+      <button class="btn-sm" onclick="loadMyUrls()">Refresh</button>
+    </div>
+    <div id="myUrlsList"><div style="color:var(--muted);font-size:13px">Loading your links...</div></div>
+  </div>
+
+  <!-- Stats + Nodes -->
+  <div class="grid-2" style="margin-bottom:1.5rem">
+    <div class="card">
+      <div class="card-title">Cluster stats</div>
+      <div class="stat-cards">
+        <div class="stat-card"><div class="stat-label">Total URLs</div><div class="stat-val" id="statTotal">0</div></div>
+        <div class="stat-card"><div class="stat-label">Cache size</div><div class="stat-val" id="statCache">0</div></div>
+        <div class="stat-card"><div class="stat-label">Hit rate</div><div class="stat-val" id="statHitRate">0%</div></div>
+      </div>
+      <div class="cache-bar-wrap">
+        <div class="cache-bar-label"><span>Cache hit rate</span><span id="cacheBarLabel">0%</span></div>
+        <div class="cache-bar-bg"><div class="cache-bar-fill" id="cacheBar" style="width:0%"></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Storage nodes</div>
+      <div id="nodeList">Loading...</div>
+    </div>
+  </div>
+
+  <!-- Hash ring -->
+  <div class="card">
+    <div class="card-title">Consistent hash ring</div>
+    <div class="ring-container"><canvas id="ringCanvas" width="240" height="240"></canvas></div>
+    <p style="font-size:12px;color:var(--muted);text-align:center;margin-top:8px">Each segment = virtual node slot. Colors = storage shards.</p>
+  </div>
+</div>
+
+<!-- Auth Modal -->
+<div class="modal-overlay" id="authModal">
+  <div class="modal">
+    <h2>Welcome to SnapLink</h2>
+    <p>Sign in to manage your links and see analytics</p>
+    <div class="modal-tabs">
+      <button class="modal-tab active" onclick="switchTab('login')">Sign in</button>
+      <button class="modal-tab" onclick="switchTab('register')">Create account</button>
+    </div>
+
+    <!-- Login -->
+    <div id="loginForm">
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" id="loginEmail" placeholder="you@example.com"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" id="loginPassword" placeholder="Your password"/>
+      </div>
+      <div class="error-box" id="loginError" style="margin-bottom:12px"></div>
+      <button class="btn" style="width:100%" onclick="login()">Sign in</button>
+    </div>
+
+    <!-- Register -->
+    <div id="registerForm" style="display:none">
+      <div class="form-group">
+        <label class="form-label">Full name</label>
+        <input type="text" id="regName" placeholder="Your name"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" id="regEmail" placeholder="you@example.com"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" id="regPassword" placeholder="Min 6 characters"/>
+      </div>
+      <div class="error-box" id="registerError" style="margin-bottom:12px"></div>
+      <button class="btn" style="width:100%" onclick="register()">Create account</button>
+    </div>
+
+    <div class="divider">or</div>
+    <button class="btn-sm" style="width:100%;padding:10px" onclick="closeAuth()">Continue without account</button>
+  </div>
+</div>
+
+<script>
+let token = localStorage.getItem('token');
+let currentUser = null;
+let lastResult = null;
+
+// Init
+window.onload = () => {
+  if (token) fetchMe();
+  refreshStats();
+  setInterval(refreshStats, 3000);
+};
+
+async function fetchMe() {
+  try {
+    const res = await fetch('/api/auth/me', { headers: authHeaders() });
+    if (!res.ok) { token = null; localStorage.removeItem('token'); return; }
+    const data = await res.json();
+    currentUser = data.user;
+    setLoggedIn(data.user);
+  } catch(e) {}
+}
+
+function setLoggedIn(user) {
+  document.getElementById('navUser').style.display = 'block';
+  document.getElementById('navUserName').textContent = user.name;
+  document.getElementById('authBtn').style.display = 'none';
+  document.getElementById('logoutBtn').style.display = 'block';
+  document.getElementById('myUrlsCard').style.display = 'block';
+  loadMyUrls();
+}
+
+function setLoggedOut() {
+  currentUser = null; token = null;
+  localStorage.removeItem('token');
+  document.getElementById('navUser').style.display = 'none';
+  document.getElementById('authBtn').style.display = 'block';
+  document.getElementById('logoutBtn').style.display = 'none';
+  document.getElementById('myUrlsCard').style.display = 'none';
+}
+
+function authHeaders() {
+  return token ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+               : { 'Content-Type': 'application/json' };
+}
+
+// Auth modal
+function openAuth() { document.getElementById('authModal').classList.add('show'); }
+function closeAuth() { document.getElementById('authModal').classList.remove('show'); }
+document.getElementById('authModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeAuth(); });
+
+function switchTab(tab) {
+  document.querySelectorAll('.modal-tab').forEach((t,i) => t.classList.toggle('active', (tab==='login'&&i===0)||(tab==='register'&&i===1)));
+  document.getElementById('loginForm').style.display = tab==='login' ? 'block' : 'none';
+  document.getElementById('registerForm').style.display = tab==='register' ? 'block' : 'none';
+}
+
+async function login() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  errEl.classList.remove('show');
+
+  try {
+    const res = await fetch('/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email,password}) });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error; errEl.classList.add('show'); return; }
+    token = data.token;
+    localStorage.setItem('token', token);
+    currentUser = data.user;
+    setLoggedIn(data.user);
+    closeAuth();
+  } catch(e) { errEl.textContent = 'Network error.'; errEl.classList.add('show'); }
+}
+
+async function register() {
+  const name = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const password = document.getElementById('regPassword').value;
+  const errEl = document.getElementById('registerError');
+  errEl.classList.remove('show');
+
+  try {
+    const res = await fetch('/api/auth/register', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name,email,password}) });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error; errEl.classList.add('show'); return; }
+    token = data.token;
+    localStorage.setItem('token', token);
+    currentUser = data.user;
+    setLoggedIn(data.user);
+    closeAuth();
+  } catch(e) { errEl.textContent = 'Network error.'; errEl.classList.add('show'); }
+}
+
+async function logout() {
+  await fetch('/api/auth/logout', { method:'POST' });
+  setLoggedOut();
+}
+
+// URL shortening
+async function shortenUrl() {
+  const url = document.getElementById('urlInput').value.trim();
+  const customCode = document.getElementById('codeInput').value.trim();
+  showError(''); showResult(null);
+
+  if (!url) return showError('Please enter a URL.');
+
+  try {
+    const res = await fetch('/api/urls/shorten', { method:'POST', headers: authHeaders(), body: JSON.stringify({url, customCode: customCode||undefined}) });
+    const data = await res.json();
+    if (!res.ok) return showError(data.error || 'Something went wrong.');
+    lastResult = data;
+    showResult(data);
+    if (currentUser) loadMyUrls();
+    refreshStats();
+  } catch(e) { showError('Network error.'); }
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorBox');
+  el.textContent = msg; el.classList.toggle('show', !!msg);
+}
+
+function showResult(data) {
+  const box = document.getElementById('resultBox');
+  if (!data) { box.classList.remove('show'); return; }
+  document.getElementById('resultUrl').textContent = data.shortUrl;
+  document.getElementById('resultMeta').textContent =
+    `Stored on ${data.primaryNode} · Replica on ${data.replicaNode}${data.isOwned ? ' · Saved to your account' : ' · Sign in to track this link'}`;
+  box.classList.add('show');
+}
+
+function copyUrl() { if (lastResult) navigator.clipboard.writeText(lastResult.shortUrl); }
+function openUrl() { if (lastResult) window.open(lastResult.shortUrl, '_blank'); }
+
+document.getElementById('urlInput').addEventListener('keydown', e => { if(e.key==='Enter') shortenUrl(); });
+
+// My URLs
+async function loadMyUrls() {
+  if (!currentUser) return;
+  try {
+    const res = await fetch('/api/urls/my', { headers: authHeaders() });
+    const data = await res.json();
+    const el = document.getElementById('myUrlsList');
+
+    if (!data.urls || data.urls.length === 0) {
+      el.innerHTML = '<div style="color:var(--muted);font-size:13px">No links yet. Shorten your first URL above!</div>';
+      return;
+    }
+
+    el.innerHTML = data.urls.map(u => `
+      <div class="url-item" id="url-${u.shortCode}">
+        <div class="url-item-left">
+          <div class="url-short">localhost:3000/${u.shortCode}</div>
+          <div class="url-original">${u.originalUrl}</div>
+          <div class="url-stats">${u.clicks} clicks · Created ${new Date(u.createdAt).toLocaleDateString()} · Node: ${u.primaryNode}</div>
+        </div>
+        <div class="url-item-right">
+          <button class="btn-sm" onclick="navigator.clipboard.writeText('http://localhost:3000/${u.shortCode}')">Copy</button>
+          <button class="btn-danger" onclick="deleteUrl('${u.shortCode}')">Delete</button>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {}
+}
+
+async function deleteUrl(code) {
+  try {
+    const res = await fetch(`/api/urls/${code}`, { method:'DELETE', headers: authHeaders() });
+    if (res.ok) { document.getElementById(`url-${code}`)?.remove(); refreshStats(); }
+  } catch(e) {}
+}
+
+// Stats + ring
+async function refreshStats() {
+  try {
+    const res = await fetch('/api/stats');
+    const data = await res.json();
+    const s = data.storage;
+
+    document.getElementById('statTotal').textContent = s.totalUrls || 0;
+    document.getElementById('statCache').textContent = s.cacheSize || 0;
+    document.getElementById('statHitRate').textContent = s.cacheHitRate || '0%';
+
+    const hitPct = parseFloat(s.cacheHitRate) || 0;
+    document.getElementById('cacheBar').style.width = hitPct + '%';
+    document.getElementById('cacheBarLabel').textContent = s.cacheHitRate || '0%';
+
+    const dist = s.nodeDistribution || {};
+    const nodeColors = {'node-1':'#6c63ff','node-2':'#4ade80','node-3':'#fbbf24','node-4':'#60a5fa'};
+    document.getElementById('nodeList').innerHTML = Object.entries(dist).map(([id,count]) => `
+      <div class="node-item">
+        <div class="node-name"><div class="node-dot" style="background:${nodeColors[id]||'#a78bfa'}"></div>${id}</div>
+        <div class="node-count">${count} slots</div>
+      </div>`).join('');
+
+    drawRing(dist, nodeColors);
+  } catch(e) {}
+}
+
+function drawRing(dist, nodeColors) {
+  const canvas = document.getElementById('ringCanvas');
+  const ctx = canvas.getContext('2d');
+  const cx=120,cy=120,r=90;
+  ctx.clearRect(0,0,240,240);
+  const nodes = Object.keys(dist);
+  const colors = nodes.map(n => nodeColors[n]||'#a78bfa');
+  const totalSlots = nodes.length * 150;
+  const sliceSz = (2*Math.PI)/totalSlots;
+  let angle = -Math.PI/2;
+  for(let i=0;i<totalSlots;i++){
+    ctx.beginPath();ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r,angle,angle+sliceSz-0.01);
+    ctx.closePath();ctx.fillStyle=colors[i%nodes.length]+'cc';ctx.fill();
+    angle+=sliceSz;
+  }
+  ctx.beginPath();ctx.arc(cx,cy,55,0,Math.PI*2);ctx.fillStyle='#1a1d27';ctx.fill();
+  ctx.fillStyle='#8b8fa8';ctx.font='11px Inter,sans-serif';ctx.textAlign='center';
+  ctx.fillText(`${nodes.length} nodes`,cx,cy-4);ctx.fillText(`${totalSlots} vnodes`,cx,cy+12);
+}
+</script>
+</body>
+</html>

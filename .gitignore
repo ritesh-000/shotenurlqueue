@@ -1,0 +1,25 @@
+# Environment files
+.env
+.env.*
+.env.example
+
+# Node modules
+node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# VS Code settings
+.vscode/
+
+# Build folders
+dist/
+build/
+
+# Coverage
+coverage/
