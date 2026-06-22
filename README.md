@@ -3,36 +3,6 @@
 A production-inspired URL shortener demonstrating core distributed systems concepts.
 Built with Node.js + Express. No external dependencies beyond npm packages.
 
-## Architecture
-
-Client Request
-      │
-      
-┌─────────────┐
-│  Express    │  ← Rate Limiting (token bucket per IP)
-│  Server     │
-└──────┬──────┘
-       │
-       
-┌─────────────┐
-│  LRU Cache  │  ← Check cache first (O(1) lookup)
-│  (in-memory)│
-└──────┬──────┘
-       │ cache miss
-       
-┌────────────────────┐
-│ Consistent Hash    │  ← Determine which shard owns this key
-│ Ring (150 vnodes)  │
-└────────┬───────────┘
-         │
-    ┌────┴────┐
-             
-┌────────┐ ┌────────┐ ┌────────┐
-│ Node-1 │ │ Node-2 │ │ Node-3 │  ← Storage shards
-│ (Map)  │ │ (Map)  │ │ (Map)  │  ← Each has replicated data too
-└────────┘ └────────┘ └────────┘
-
-
 ## Key Distributed Systems Concepts
 
 ### 1. Consistent Hashing
