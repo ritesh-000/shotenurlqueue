@@ -47,7 +47,10 @@ app.get('*', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-const MONGO_URI = 'mongodb://127.0.0.1:27017/snaplink';
+// const MONGO_URI = 'mongodb://127.0.0.1:27017/snaplink';
+const MONGO_URI =
+  process.env.MONGO_URI ||
+  'mongodb://127.0.0.1:27017/snaplink';
 
 mongoose.connection.on('connected', () => console.log('✅ MongoDB connected'));
 mongoose.connection.on('error', (err) => console.error('MongoDB error:', err.message));
@@ -56,11 +59,7 @@ mongoose.connect(MONGO_URI)
   .then(() => {
     app.listen(PORT, () => console.log(`\n🚀 SnapLink running on http://localhost:${PORT}\n`));
   })
-  // .catch(err => {
-  //   console.error('❌ MongoDB failed:', err.message);
-  //   console.log('👉 Run in terminal: net start MongoDB\n');
-  //   app.listen(PORT, () => console.log(`SnapLink running on http://localhost:${PORT} (no DB)`));
-  // });
+  
    .catch(err => {
     console.error(
       'MongoDB connection failed:',
