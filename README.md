@@ -3,6 +3,9 @@
 A production-inspired URL shortener demonstrating core distributed systems concepts.
 Built with Node.js + Express. No external dependencies beyond npm packages.
 
+## live demo 
+### https://shorturl-4vzo.onrender.com/
+
 ## Key Distributed Systems Concepts
 
 ### 1. Consistent Hashing
