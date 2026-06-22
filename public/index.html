@@ -335,54 +335,204 @@ function showError(msg) {
   el.textContent = msg; el.classList.toggle('show', !!msg);
 }
 
+
 function showResult(data) {
   const box = document.getElementById('resultBox');
-  if (!data) { box.classList.remove('show'); return; }
-  document.getElementById('resultUrl').textContent = data.shortUrl;
+
+  if (!data) {
+    box.classList.remove('show');
+    return;
+  }
+
+  document.getElementById('resultUrl').textContent =
+    data.shortUrl;
+
   document.getElementById('resultMeta').textContent =
-    `Stored on ${data.primaryNode} · Replica on ${data.replicaNode}${data.isOwned ? ' · Saved to your account' : ' · Sign in to track this link'}`;
+    `Stored on ${data.primaryNode} · Replica on ${data.replicaNode}${
+      data.isOwned
+        ? ' · Saved to your account'
+        : ' · Sign in to track this link'
+    }`;
+
   box.classList.add('show');
 }
 
-function copyUrl() { if (lastResult) navigator.clipboard.writeText(lastResult.shortUrl); }
-function openUrl() { if (lastResult) window.open(lastResult.shortUrl, '_blank'); }
+// function copyUrl() { if (lastResult) navigator.clipboard.writeText(lastResult.shortUrl); }
+function copyUrl() {
+  if (!lastResult) return;
+
+  navigator.clipboard.writeText(lastResult.shortUrl)
+    .then(() => alert('URL copied!'))
+    .catch(() => alert('Copy failed'));
+}
+// function openUrl() { if (lastResult) window.open(lastResult.shortUrl, '_blank'); }
+function openUrl() {
+  if (!lastResult) return;
+  window.open(lastResult.shortUrl, '_blank');
+}
 
 document.getElementById('urlInput').addEventListener('keydown', e => { if(e.key==='Enter') shortenUrl(); });
 
+
 // My URLs
+// async function loadMyUrls() {
+//   if (!currentUser) return;
+
+//   try {
+//     const res = await fetch('/api/urls/my', {
+//       headers: authHeaders()
+//     });
+
+//     const data = await res.json();
+//     const el = document.getElementById('myUrlsList');
+
+//     if (!data.urls || data.urls.length === 0) {
+//       el.innerHTML =
+//         '<div style="color:var(--muted);font-size:13px">No links yet. Shorten your first URL above!</div>';
+//       return;
+//     }
+
+//     const baseUrl = window.location.origin;
+
+//     el.innerHTML = data.urls.map(u => `
+//       <div class="url-item" id="url-${u.shortCode}">
+//         <div class="url-item-left">
+//           <div class="url-short">
+//             ${baseUrl}/${u.shortCode}
+//           </div>
+
+//           <div class="url-original">
+//             ${u.originalUrl}
+//           </div>
+
+//           <div class="url-stats">
+//             ${u.clicks} clicks ·
+//             Created ${new Date(u.createdAt).toLocaleDateString()}
+//             · Node: ${u.primaryNode}
+//           </div>
+//         </div>
+
+//         <div class="url-item-right">
+//           <button
+//             class="btn-sm"
+//             onclick="navigator.clipboard.writeText('${baseUrl}/${u.shortCode}')">
+//             Copy
+//           </button>
+
+//           <button
+//             class="btn-sm"
+//             onclick="window.open('${baseUrl}/${u.shortCode}','_blank')">
+//             Open
+//           </button>
+
+//           <button
+//             class="btn-danger"
+//             onclick="deleteUrl('${u.shortCode}')">
+//             Delete
+//           </button>
+//         </div>
+//       </div>
+//     `).join('');
+
+//   } catch (e) {
+//     console.error(e);
+//   }
+// }
 async function loadMyUrls() {
   if (!currentUser) return;
+
   try {
-    const res = await fetch('/api/urls/my', { headers: authHeaders() });
+    const res = await fetch('/api/urls/my', {
+      headers: authHeaders()
+    });
+
     const data = await res.json();
     const el = document.getElementById('myUrlsList');
 
     if (!data.urls || data.urls.length === 0) {
-      el.innerHTML = '<div style="color:var(--muted);font-size:13px">No links yet. Shorten your first URL above!</div>';
+      el.innerHTML =
+        '<div style="color:var(--muted);font-size:13px">No links yet. Shorten your first URL above!</div>';
       return;
     }
+
+    const baseUrl = window.location.origin;
 
     el.innerHTML = data.urls.map(u => `
       <div class="url-item" id="url-${u.shortCode}">
         <div class="url-item-left">
-          <div class="url-short">localhost:3000/${u.shortCode}</div>
-          <div class="url-original">${u.originalUrl}</div>
-          <div class="url-stats">${u.clicks} clicks · Created ${new Date(u.createdAt).toLocaleDateString()} · Node: ${u.primaryNode}</div>
+
+          <div class="url-short">
+            ${baseUrl}/${u.shortCode}
+          </div>
+
+          <div class="url-original">
+            ${u.originalUrl}
+          </div>
+
+          <div class="url-stats">
+            ${u.clicks} clicks ·
+            Created ${new Date(u.createdAt).toLocaleDateString()}
+            · Node: ${u.primaryNode}
+          </div>
+
         </div>
+
         <div class="url-item-right">
-          <button class="btn-sm" onclick="navigator.clipboard.writeText('http://localhost:3000/${u.shortCode}')">Copy</button>
-          <button class="btn-danger" onclick="deleteUrl('${u.shortCode}')">Delete</button>
+
+          <button
+            class="btn-sm"
+            onclick="navigator.clipboard.writeText('${baseUrl}/${u.shortCode}')">
+            Copy
+          </button>
+
+          <button
+            class="btn-sm"
+            onclick="window.open('${baseUrl}/${u.shortCode}','_blank')">
+            Open
+          </button>
+
+          <button
+            class="btn-danger"
+            onclick="deleteUrl('${u.shortCode}')">
+            Delete
+          </button>
+
         </div>
       </div>
     `).join('');
-  } catch(e) {}
+
+  } catch (err) {
+    console.error(err);
+  }
 }
 
+// async function deleteUrl(code) {
+//   try {
+//     const res = await fetch(`/api/urls/${code}`, { method:'DELETE', headers: authHeaders() });
+//     if (res.ok) { document.getElementById(`url-${code}`)?.remove(); refreshStats(); }
+//   } catch(e) {}
+// }
 async function deleteUrl(code) {
   try {
-    const res = await fetch(`/api/urls/${code}`, { method:'DELETE', headers: authHeaders() });
-    if (res.ok) { document.getElementById(`url-${code}`)?.remove(); refreshStats(); }
-  } catch(e) {}
+    const res = await fetch(`/api/urls/${code}`, {
+      method: 'DELETE',
+      headers: authHeaders()
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.error);
+      return;
+    }
+
+    document.getElementById(`url-${code}`)?.remove();
+    refreshStats();
+
+  } catch (err) {
+    console.error(err);
+    alert('Failed to delete URL');
+  }
 }
 
 // Stats + ring
